@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta name="theme-color" content="#0b0c10">
+  <meta name="description" content="Fußballturniere offline planen, Ergebnisse eintragen und Tabellen berechnen.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fußball Gaming Turnierplaner</title>
+  <style>
+:root {
+  --bg: #0b0c10;
+  --card: rgba(20,22,28,0.62);
+  --text: #f2f2f2;
+  --muted: #a8b0bf;
+  --line: rgba(255,255,255,0.08);
+  --accent: #5eead4;
+}
+:root.light {
+  --bg: #f6f7fb;
+  --card: rgba(255,255,255,0.72);
+  --text: #12131a;
+  --muted: #4b5563;
+  --line: rgba(0,0,0,0.08);
+  --accent: #2563eb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  color: var(--text);
+  height: 100vh;
+  background:
+    radial-gradient(1200px 700px at 20% 10%, rgba(94,234,212,0.18), transparent 55%),
+    radial-gradient(1000px 600px at 85% 25%, rgba(168,85,247,0.20), transparent 55%),
+    radial-gradient(900px 600px at 60% 90%, rgba(34,197,94,0.16), transparent 55%),
+    var(--bg);
+}
+#app { height: 100vh; display: flex; flex-direction: column; }
+.top { display: flex; justify-content: space-between; align-items: center; padding: 16px 14px 10px; }
+h1 { margin: 0; font-size: 22px; }
+.sub { margin-top: 6px; color: var(--muted); font-size: 13px; }
+.content { flex: 1; padding: 12px; padding-bottom: 90px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.screen { display: none; }
+.screen.active { display: block; }
+.card { border: 1px solid var(--line); background: var(--card); backdrop-filter: blur(10px); border-radius: 16px; padding: 12px; margin: 12px 0; }
+.row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+input { width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: rgba(0,0,0,0.18); color: var(--text); outline: none; }
+:root.light input { background: rgba(255,255,255,0.7); }
+button { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(0,0,0,0.18); color: var(--text); cursor: pointer; }
+:root.light button { background: rgba(255,255,255,0.7); }
+button.primary { border-color: rgba(94,234,212,0.35); background: rgba(94,234,212,0.14); }
+.iconBtn { width: 44px; height: 44px; padding: 0; display:grid; place-items:center; }
+.hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.list { list-style:none; padding:0; margin-top: 10px; display:grid; gap:8px; }
+.list li { display:flex; justify-content:space-between; align-items:center; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: rgba(0,0,0,0.12); }
+.stack { display:grid; gap:10px; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); background: rgba(15,16,22,0.75); backdrop-filter: blur(12px); }
+:root.light .tabs { background: rgba(250,250,252,0.75); }
+.tab { padding: 14px 10px; border: 0; background: transparent; color: var(--muted); }
+.tab.active { color: var(--text); }
+.foot { position: fixed; left: 0; right: 0; bottom: 58px; padding: 6px 12px; color: var(--muted); font-size: 12px; pointer-events:none; }
+.pill { padding: 10px 12px; border-radius: 999px; cursor: pointer; }
+.pill.active { outline: 2px solid rgba(94,234,212,0.45); }
+.matchRow { display:flex; justify-content:space-between; align-items:center; gap:10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.scoreBox { display:flex; gap:8px; align-items:center; }
+.scoreBox input { width: 70px; text-align: center; }
+.smallBtn { padding: 10px 12px; border-radius: 12px; }
+.tableWrap { border: 1px solid var(--line); border-radius: 14px; background: rgba(0,0,0,0.10); overflow-x: auto; max-width: 100%; }
+:root.light .tableWrap { background: rgba(255,255,255,0.65); }
+.tblHeader, .tblRow { display: grid; grid-template-columns: 34px 260px 38px 34px 34px 34px 38px 38px 38px 46px; gap: 10px; align-items: center; padding: 10px 12px; min-width: 780px; }
+.tblHeader { position: sticky; top: 0; background: rgba(0,0,0,0.18); color: var(--muted); font-weight: 800; font-size: 12px; border-bottom: 1px solid var(--line); }
+:root.light .tblHeader { background: rgba(255,255,255,0.80); }
+.tblRow { font-size: 14px; border-bottom: 1px solid var(--line); }
+.tblRow:last-child { border-bottom: 0; }
+.tblRow:hover { background: rgba(255,255,255,0.04); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.strong { font-weight: 900; }
+.teamCell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.teamName { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playerName { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Kleine Ergänzungen für die Browser-Bedienung */
+#teamsList li > div { min-width:0; overflow-wrap:anywhere; padding-right:8px; }
+.matchRow > div:first-child { min-width: 160px; overflow-wrap:anywhere; }
+button:focus-visible, input:focus-visible, .pill:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media (max-width: 650px) { .scoreBox { flex-wrap:wrap; } .scoreBox input { width:52px; } .matchRow { align-items:flex-start; } }
+@media print { .tabs,.foot,.top,.card.row,#scopeBar { display:none!important; } .content { overflow:visible; } }
+
+/* PC-Ansicht: gut lesbarer, zentrierter Inhaltsbereich */
+@media (min-width: 900px) { .top, .content { width: min(100%, 1100px); margin-left: auto; margin-right: auto; } .top { padding-top: 24px; } }
+
+</style>
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div><h1>Fußball Gaming Turnierplaner</h1><p class="sub">Setup • Spieltage • Tabelle</p></div>
+      <button id="themeToggle" class="iconBtn" title="Theme umschalten">🌙</button>
+    </header>
+    <main class="content">
+      <section id="screen-setup" class="screen active">
+        <h2>Setup</h2>
+        <div class="card">
+          <div class="row">
+            <div id="modeHin" class="pill active" role="button" tabindex="0">Hinrunde</div>
+            <div id="modeBoth" class="pill" role="button" tabindex="0">Hin- &amp; Rückrunde</div>
+          </div>
+          <button id="newTournamentBtn" class="primary" style="margin-top:12px">Neues Turnier erstellen</button>
+          <p class="hint">Achtung: setzt den Spielplan und die Ergebnisse zurück. Bereits angelegte Teams bleiben erhalten.</p>
+        </div>
+        <div class="card">
+          <h3>Teams</h3>
+          <div class="row"><input id="teamName" placeholder="Teamname" maxlength="40" /></div>
+          <div class="row"><input id="playerName" placeholder="Spielername (optional)" maxlength="40" /></div>
+          <div class="row"><button id="addTeamBtn">Team hinzufügen</button></div>
+          <ul id="teamsList" class="list"></ul>
+        </div>
+        <div class="card"><button id="generateBtn" class="primary">Spielplan erzeugen</button></div>
+        <div class="card" id="supportSection">
+          <h3>❤️ Entwickler unterstützen</h3>
+          <p>Die Fußballturnier-App ist kostenlos und werbefrei. Wenn sie dir gefällt, kannst du die Entwicklung freiwillig unterstützen. Du erhältst dadurch keine zusätzlichen Funktionen oder Vorteile.</p>
+          <a class="supportLink" href="https://www.paypal.me/MarcelSchulze94" target="_blank" rel="noopener noreferrer">❤️ Freiwillig über PayPal unterstützen</a>
+          <p class="hint">Die Unterstützung ist vollkommen freiwillig. Für PayPal benötigst du eine Internetverbindung. Die Turnier-App selbst funktioniert weiterhin offline.</p>
+        </div>
+        <div class="card"><h3>Datensicherung</h3><div class="row"><button id="backupBtn">Backup herunterladen</button><button id="restoreBtn">Backup einlesen</button><input id="restoreInput" type="file" accept="application/json,.json" hidden /></div><p class="hint">Die Daten werden lokal in diesem Browser gespeichert. Erstelle regelmäßig ein Backup.</p></div>
+      </section>
+      <section id="screen-rounds" class="screen"><h2>Spieltage</h2><div id="roundsList" class="stack"></div></section>
+      <section id="screen-standings" class="screen">
+        <h2>Tabelle</h2><div id="scopeBar" class="row"></div>
+        <div class="card row" style="justify-content:space-between"><button id="refreshStandingsBtn">Aktualisieren</button><button id="pdfBtn" class="primary">PDF Export</button></div>
+        <div class="tableWrap">
+          <div class="tblHeader"><div>#</div><div>Verein</div><div class="num">Sp</div><div class="num">S</div><div class="num">U</div><div class="num">N</div><div class="num">TF</div><div class="num">TG</div><div class="num">TD</div><div class="num strong">Pkte</div></div>
+          <div id="standingsRows" class="tblBody"></div>
+        </div>
+      </section>
+    </main>
+    <nav class="tabs"><button class="tab active" data-tab="setup">Setup</button><button class="tab" data-tab="rounds">Spieltage</button><button class="tab" data-tab="standings">Tabelle</button></nav>
+    <footer class="foot"><span id="status"></span></footer>
+  </div>
+  <script>
+"use strict";
+
+// Reine Browser-Version: keine Server-API und keine Modulimporte erforderlich.
+const STORAGE_KEY = "fussballturnier_original_v1";
+const $ = id => document.getElementById(id);
+const blankState = () => ({ tournament: { hasSecondLeg: false, createdAt: Date.now() }, teams: [], rounds: [], results: {} });
+function loadState() {
+  try {
+    const value = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!value || !Array.isArray(value.teams) || !Array.isArray(value.rounds) || typeof value.results !== "object" || !value.results) return blankState();
+    return { ...blankState(), ...value, tournament: { ...blankState().tournament, ...value.tournament } };
+  } catch { return blankState(); }
+}
+let state = loadState();
+let currentScope = "total";
+let playSecondLeg = !!state.tournament.hasSecondLeg;
+function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { setStatus("Speichern fehlgeschlagen – bitte Backup erstellen."); } }
+function setStatus(message = "") { $("status").textContent = message; }
+function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
+function scopeLabel(scope) { return scope === "first" ? "Hinrunde" : scope === "second" ? "Rückrunde" : "Gesamt"; }
+function roundsForScope(scope) { return state.rounds.filter(r => scope === "first" ? r.leg === 1 : scope === "second" ? r.leg === 2 : true); }
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === `screen-${tab}`));
+  if (tab === "rounds") refreshRounds();
+  if (tab === "standings") refreshStandings(currentScope);
+}
+document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
+function applyTheme(theme) {
+  document.documentElement.classList.toggle("light", theme === "light");
+  $("themeToggle").textContent = theme === "light" ? "☀️" : "🌙";
+  try { localStorage.setItem("fussballturnier_theme", theme); } catch {}
+}
+$("themeToggle").onclick = () => applyTheme(document.documentElement.classList.contains("light") ? "dark" : "light");
+applyTheme("dark");
+function setMode(secondLeg) {
+  playSecondLeg = secondLeg;
+  $("modeHin").classList.toggle("active", !secondLeg);
+  $("modeBoth").classList.toggle("active", secondLeg);
+}
+for (const [id, value] of [["modeHin", false], ["modeBoth", true]]) {
+  $(id).onclick = () => setMode(value);
+  $(id).onkeydown = event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setMode(value); } };
+}
+setMode(playSecondLeg);
+$("newTournamentBtn").onclick = () => {
+  if (state.teams.length < 2) return setStatus("Mindestens 2 Teams nötig.");
+  if ((state.rounds.length || Object.keys(state.results).length) && !confirm("Spielplan und alle Ergebnisse wirklich löschen? Teams bleiben erhalten.")) return;
+  state.tournament = { hasSecondLeg: playSecondLeg, createdAt: Date.now() };
+  state.rounds = []; state.results = {}; currentScope = "total";
+  saveState(); refreshRounds(); renderScopeBar(); refreshStandings(currentScope);
+  setStatus("Neues Turnier erstellt. Jetzt Spielplan erzeugen.");
+};
+$("addTeamBtn").onclick = () => {
+  const name = $("teamName").value.trim();
+  const player = $("playerName").value.trim();
+  if (!name) return setStatus("Bitte Teamname eingeben.");
+  if (state.teams.some(t => t.name.toLocaleLowerCase("de") === name.toLocaleLowerCase("de"))) return setStatus("Dieses Team gibt es schon.");
+  if (state.rounds.length && !confirm("Beim Hinzufügen eines Teams wird der bisherige Spielplan samt Ergebnissen gelöscht. Fortfahren?")) return;
+  if (state.rounds.length) { state.rounds = []; state.results = {}; }
+  const nextId = Math.max(0, ...state.teams.map(t => Number(t.id) || 0)) + 1;
+  state.teams.push({ id: nextId, name, player_name: player });
+  saveState(); $("teamName").value = ""; $("playerName").value = "";
+  refreshTeams(); refreshRounds(); refreshStandings(currentScope); setStatus("Team hinzugefügt.");
+};
+$("teamName").addEventListener("keydown", e => { if (e.key === "Enter") $("addTeamBtn").click(); });
+$("playerName").addEventListener("keydown", e => { if (e.key === "Enter") $("addTeamBtn").click(); });
+function refreshTeams() {
+  const root = $("teamsList"); root.replaceChildren();
+  for (const team of [...state.teams].sort((a,b) => a.name.localeCompare(b.name, "de"))) {
+    const li = document.createElement("li");
+    const info = document.createElement("div"); info.textContent = team.name + (team.player_name ? ` (${team.player_name})` : "");
+    const remove = document.createElement("button"); remove.className = "smallBtn"; remove.textContent = "🗑"; remove.title = `${team.name} löschen`;
+    remove.onclick = () => {
+      if (state.rounds.length && !confirm("Das Löschen eines Teams setzt den Spielplan und alle Ergebnisse zurück. Fortfahren?")) return;
+      state.teams = state.teams.filter(t => t.id !== team.id);
+      if (state.rounds.length) { state.rounds = []; state.results = {}; }
+      saveState(); refreshTeams(); refreshRounds(); refreshStandings(currentScope); setStatus("Team gelöscht.");
+    };
+    li.append(info, remove); root.append(li);
+  }
+}
+function buildRoundRobin(input) {
+  const teams = [...input];
+  if (teams.length % 2) teams.push({ id: -1, name: "BYE" });
+  const n = teams.length, arr = [...teams], rounds = [];
+  for (let round = 1; round < n; round++) {
+    const matches = [];
+    for (let i = 0; i < n / 2; i++) {
+      const a = arr[i], b = arr[n - 1 - i];
+      const home = round % 2 === 0 ? b : a;
+      const away = round % 2 === 0 ? a : b;
+      if (home.id === -1 || away.id === -1) {
+        const real = home.id === -1 ? away : home;
+        matches.push({ match_id: `r${round}-bye-${real.id}`, is_bye: true, bye_team_id: real.id, bye_team: real.name });
+      } else {
+        matches.push({ match_id: `r${round}-${home.id}-${away.id}`, is_bye: false, home_id: home.id, away_id: away.id });
+      }
+    }
+    rounds.push({ round_index: round, leg: 1, matches });
+    arr.splice(1, 0, arr.pop());
+  }
+  return rounds;
+}
+function buildSecondLeg(first) {
+  const offset = first.length;
+  return first.map((rd, idx) => ({
+    round_index: offset + idx + 1, leg: 2,
+    matches: rd.matches.map(m => m.is_bye
+      ? { ...m, match_id: `r${offset + idx + 1}-bye-${m.bye_team_id}` }
+      : { match_id: `r${offset + idx + 1}-${m.away_id}-${m.home_id}`, is_bye: false, home_id: m.away_id, away_id: m.home_id })
+  }));
+}
+$("generateBtn").onclick = () => {
+  if (state.teams.length < 2) return setStatus("Mindestens 2 Teams nötig.");
+  if (state.rounds.length && !confirm("Spielplan neu erzeugen? Alle bisherigen Ergebnisse werden gelöscht.")) return;
+  const teams = [...state.teams];
+  for (let i = teams.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [teams[i], teams[j]] = [teams[j], teams[i]]; }
+  state.tournament.hasSecondLeg = playSecondLeg;
+  const first = buildRoundRobin(teams);
+  state.rounds = playSecondLeg ? first.concat(buildSecondLeg(first)) : first;
+  state.results = {}; currentScope = "total";
+  saveState(); refreshRounds(); renderScopeBar(); refreshStandings(currentScope);
+  setStatus("Spielplan erzeugt."); switchTab("rounds");
+};
+function refreshRounds() {
+  const root = $("roundsList"); root.replaceChildren();
+  if (!state.rounds.length) { root.innerHTML = "<p class='hint'>Noch kein Spielplan erstellt.</p>"; return; }
+  const teamById = new Map(state.teams.map(t => [t.id, t]));
+  for (const rd of state.rounds) {
+    const card = document.createElement("div"); card.className = "card";
+    const title = document.createElement("h3"); title.textContent = `Spieltag ${rd.round_index}${rd.leg === 2 ? " (Rückrunde)" : ""}`; card.append(title);
+    for (const m of rd.matches) {
+      const row = document.createElement("div"); row.className = "matchRow";
+      if (m.is_bye) { row.textContent = `Pause: ${teamById.get(m.bye_team_id)?.name || m.bye_team}`; }
+      else {
+        const names = document.createElement("div");
+        const homeName = teamById.get(m.home_id)?.name || "?", awayName = teamById.get(m.away_id)?.name || "?";
+        names.innerHTML = `<strong>${escapeHtml(homeName)}</strong> vs <strong>${escapeHtml(awayName)}</strong>`;
+        const box = document.createElement("div"); box.className = "scoreBox";
+        const saved = state.results[m.match_id] || { h: "", a: "" };
+        const h = document.createElement("input"), a = document.createElement("input");
+        for (const [input, val, label] of [[h,saved.h,"Heimtore"],[a,saved.a,"Auswärtstore"]]) {
+          input.type = "number"; input.min = "0"; input.step = "1"; input.inputMode = "numeric";
+          input.value = val ?? ""; input.setAttribute("aria-label", `${label}: ${homeName} gegen ${awayName}`);
+        }
+        const store = () => {
+          if (h.value === "" || a.value === "") delete state.results[m.match_id];
+          else if (/^\d+$/.test(h.value) && /^\d+$/.test(a.value) && Number.isSafeInteger(Number(h.value)) && Number.isSafeInteger(Number(a.value))) {
+            state.results[m.match_id] = { h: Number(h.value), a: Number(a.value) };
+          } else { setStatus("Bitte gültige, nichtnegative ganze Tore eingeben."); return; }
+          saveState(); refreshStandings(currentScope); setStatus("✓ gespeichert");
+        };
+        h.onchange = store; a.onchange = store;
+        const reset = document.createElement("button"); reset.className = "smallBtn"; reset.textContent = "Reset";
+        reset.onclick = () => { delete state.results[m.match_id]; saveState(); h.value = ""; a.value = ""; refreshStandings(currentScope); setStatus("Ergebnis zurückgesetzt."); };
+        box.append(h, document.createTextNode(":"), a, reset); row.append(names, box);
+      }
+      card.append(row);
+    }
+    root.append(card);
+  }
+}
+function computeStandings(scope) {
+  const table = new Map(state.teams.map(t => [t.id, {
+    team_id: t.id, team: t.name, player_name: t.player_name || "", played: 0, wins: 0, draws: 0, losses: 0,
+    gf: 0, ga: 0, gd: 0, points: 0
+  }]));
+  for (const rd of roundsForScope(scope)) for (const m of rd.matches) {
+    if (m.is_bye) continue;
+    const result = state.results[m.match_id];
+    if (!result || !Number.isSafeInteger(result.h) || !Number.isSafeInteger(result.a) || result.h < 0 || result.a < 0) continue;
+    const home = table.get(m.home_id), away = table.get(m.away_id);
+    if (!home || !away) continue;
+    home.played++; away.played++;
+    home.gf += result.h; home.ga += result.a; away.gf += result.a; away.ga += result.h;
+    if (result.h > result.a) { home.wins++; away.losses++; home.points += 3; }
+    else if (result.h < result.a) { away.wins++; home.losses++; away.points += 3; }
+    else { home.draws++; away.draws++; home.points++; away.points++; }
+  }
+  const rows = [...table.values()];
+  rows.forEach(r => r.gd = r.gf - r.ga);
+  rows.sort((a,b) => b.points - a.points || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team, "de"));
+  rows.forEach((r,i) => r.rank = i + 1);
+  return rows;
+}
+function renderScopeBar() {
+  const root = $("scopeBar"); root.replaceChildren();
+  const scopes = state.tournament.hasSecondLeg ? [["total","Gesamt"],["first","Hinrunde"],["second","Rückrunde"]] : [["total","Gesamt"]];
+  if (!scopes.some(([key]) => key === currentScope)) currentScope = "total";
+  for (const [key, title] of scopes) {
+    const btn = document.createElement("button"); btn.className = `pill${currentScope === key ? " active" : ""}`; btn.textContent = title;
+    btn.onclick = () => { currentScope = key; renderScopeBar(); refreshStandings(key); };
+    root.append(btn);
+  }
+}
+function refreshStandings(scope) {
+  const root = $("standingsRows"); root.replaceChildren();
+  for (const r of computeStandings(scope)) {
+    const row = document.createElement("div"); row.className = "tblRow";
+    const position = document.createElement("div"); position.className = "num strong"; position.textContent = r.rank;
+    const team = document.createElement("div"); team.className = "teamCell";
+    team.innerHTML = `<div class="teamName">${escapeHtml(r.team)}</div>${r.player_name ? `<div class="playerName">${escapeHtml(r.player_name)}</div>` : ""}`;
+    row.append(position, team);
+    for (const field of ["played","wins","draws","losses","gf","ga","gd","points"]) {
+      const cell = document.createElement("div"); cell.className = `num${field === "points" ? " strong" : ""}`; cell.textContent = r[field]; row.append(cell);
+    }
+    root.append(row);
+  }
+}
+$("refreshStandingsBtn").onclick = () => { refreshStandings(currentScope); setStatus("Tabelle aktualisiert."); };
+function exportToPrintPdf(scope, filename) {
+  const rows = computeStandings(scope);
+  const byId = new Map(state.teams.map(t => [t.id,t]));
+  const tableRows = rows.map(r => `<tr><td>${r.rank}</td><td>${escapeHtml(r.team)}${r.player_name ? `<div class="sub">${escapeHtml(r.player_name)}</div>` : ""}</td>${[r.played,r.wins,r.draws,r.losses,r.gf,r.ga,r.gd,r.points].map(n => `<td class="num">${n}</td>`).join("")}</tr>`).join("");
+  const roundsHtml = roundsForScope(scope).map(rd => `<div class="round"><h3>Spieltag ${rd.round_index}${rd.leg === 2 ? " (Rückrunde)" : ""}</h3><ul>${rd.matches.map(m => {
+    if (m.is_bye) return `<li>Pause: <strong>${escapeHtml(byId.get(m.bye_team_id)?.name || m.bye_team)}</strong></li>`;
+    const res = state.results[m.match_id];
+    return `<li>${escapeHtml(byId.get(m.home_id)?.name || "?")} – ${escapeHtml(byId.get(m.away_id)?.name || "?")} <span class="score">${res ? `${res.h}:${res.a}` : "— : —"}</span></li>`;
+  }).join("")}</ul></div>`).join("");
+  const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${escapeHtml(filename)}</title><style>
+  body{font-family:Arial,sans-serif;padding:18px;color:#111}h1{margin:0 0 6px}.meta{color:#555;margin:0 0 14px;font-size:12px}
+  table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #ddd;padding:8px;font-size:12px;vertical-align:top}
+  th{background:#f2f2f2;text-align:left}.num{text-align:right}.sub{font-size:11px;color:#666;margin-top:2px}
+  .pagebreak{break-before:page;margin-top:24px}.round h3{margin:14px 0 6px}.round ul{margin:0;padding-left:16px}.round li{margin:4px 0}
+  .score{float:right;font-weight:bold}.bar{position:sticky;top:0;background:#fff;padding:10px 0}.bar button{padding:10px;margin-right:8px}
+  @media print{.bar{display:none}}
+    .supportLink { display: inline-block; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(94,234,212,.35); background: rgba(94,234,212,.14); color: var(--text); font-weight: 650; text-decoration: none; }
+    .supportLink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  </style></head><body><div class="bar"><button onclick="window.print()">PDF speichern / Drucken</button><button onclick="window.close()">Schließen</button></div>
+  <h1>Fußballturnier – Abschlusstabelle</h1><div class="meta">Export: ${escapeHtml(new Date().toLocaleString("de-DE"))} · Modus: ${state.tournament.hasSecondLeg ? "Hin- & Rückrunde" : "Hinrunde"} · Auswahl: ${escapeHtml(scopeLabel(scope))}</div>
+  <table><thead><tr><th>Pl</th><th>Verein (Spieler)</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>TF</th><th>TG</th><th>TD</th><th>Pkte</th></tr></thead><tbody>${tableRows}</tbody></table>
+  <div class="pagebreak"></div><h2>Ergebnisse</h2>${roundsHtml}<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),300));<\/script>  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.warn));
+    }
+  </script>
+</body></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank");
+  if (!win) { URL.revokeObjectURL(url); alert("Bitte Pop-ups für diese Seite erlauben, damit die Druckansicht geöffnet werden kann."); return; }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+$("pdfBtn").onclick = () => {
+  const name = prompt("Dateiname", "Abschlusstabelle");
+  if (name !== null) exportToPrintPdf(currentScope, name.trim() || "Abschlusstabelle");
+};
+$("backupBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = `Fussballturnier_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000); setStatus("Backup heruntergeladen.");
+};
+$("restoreBtn").onclick = () => $("restoreInput").click();
+$("restoreInput").onchange = async event => {
+  const file = event.target.files?.[0]; if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (!parsed || !Array.isArray(parsed.teams) || !Array.isArray(parsed.rounds) || !parsed.results || typeof parsed.results !== "object" || !parsed.tournament) throw Error("Ungültiges Backup-Format");
+    if (!confirm("Vorhandene Turnierdaten durch das Backup ersetzen?")) return;
+    state = parsed; currentScope = "total"; setMode(!!state.tournament.hasSecondLeg);
+    saveState(); refreshTeams(); refreshRounds(); renderScopeBar(); refreshStandings(currentScope); setStatus("Backup wiederhergestellt.");
+  } catch (error) { alert(`Backup konnte nicht geladen werden: ${error.message}`); }
+  finally { event.target.value = ""; }
+};
+refreshTeams(); refreshRounds(); renderScopeBar(); refreshStandings(currentScope);
+
+</script>
+</body>
+</html>
