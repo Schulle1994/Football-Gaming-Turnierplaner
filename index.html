@@ -373,12 +373,7 @@ function exportToPrintPdf(scope, filename) {
   </style></head><body><div class="bar"><button onclick="window.print()">PDF speichern / Drucken</button><button onclick="window.close()">Schließen</button></div>
   <h1>Fußballturnier – Abschlusstabelle</h1><div class="meta">Export: ${escapeHtml(new Date().toLocaleString("de-DE"))} · Modus: ${state.tournament.hasSecondLeg ? "Hin- & Rückrunde" : "Hinrunde"} · Auswahl: ${escapeHtml(scopeLabel(scope))}</div>
   <table><thead><tr><th>Pl</th><th>Verein (Spieler)</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>TF</th><th>TG</th><th>TD</th><th>Pkte</th></tr></thead><tbody>${tableRows}</tbody></table>
-  <div class="pagebreak"></div><h2>Ergebnisse</h2>${roundsHtml}<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),300));<\/script>  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.warn));
-    }
-  </script>
-</body></html>`;
+  <div class="pagebreak"></div><h2>Ergebnisse</h2>${roundsHtml}<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),300));<\/script></body></html>`;
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const win = window.open(url, "_blank");
@@ -409,6 +404,11 @@ $("restoreInput").onchange = async event => {
 };
 refreshTeams(); refreshRounds(); renderScopeBar(); refreshStandings(currentScope);
 
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.warn));
+}
 </script>
 </body>
 </html>

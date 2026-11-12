@@ -26,3 +26,5 @@ NEU: FREIWILLIGE UNTERSTÜTZUNG
 - Der PayPal-Link benötigt Internet und öffnet eine externe Seite.
 - Vor dem Play-Store-Upload die dann gültigen Google-Play-Zahlungsrichtlinien prüfen; eine Freigabe externer Links ist nicht garantiert.
 - Falls GitHub Pages bereits eingerichtet ist: aktualisierte Dateien hochladen; der Service-Worker-Cache wurde auf v2 gesetzt.
+
+REPARATUR: JavaScript-Fehler behoben. Alle Dateien erneut in GitHub hochladen und ersetzen.
